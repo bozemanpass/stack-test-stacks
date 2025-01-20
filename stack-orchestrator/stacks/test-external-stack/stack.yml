@@ -1,0 +1,11 @@
+version: "1.0"
+name: external-test
+description: "An external test stack"
+repos:
+  - git.vdb.to/cerc-io/test-project@test-branch
+containers:
+  - bpi/test-container
+  - bpi/external-test-container
+pods:
+  - test
+  - external-test
