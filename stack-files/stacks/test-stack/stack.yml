@@ -4,7 +4,6 @@ repos:
   - github.com/bozemanpass/stack-test-project@test-branch
 containers:
   - name: bozemanpass/test-container
-    ref: bozemanpass/stack-test-stacks
-    path: containers/bpi-test-container
+  # Note: the ref (repo) and path (within the repo) are inferred because we use standard naming conventions in this repo
 pods:
   - test
