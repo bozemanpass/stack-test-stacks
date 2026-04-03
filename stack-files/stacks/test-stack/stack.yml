@@ -3,6 +3,6 @@ description: "A test stack"
 repos:
   - github.com/bozemanpass/stack-test-project@test-branch
 containers:
-  - bpi/external-test-container
+  - bozemanpass/test-container
 pods:
-  - external-test
+  - test
