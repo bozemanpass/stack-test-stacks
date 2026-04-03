@@ -1,6 +1,6 @@
 version: "1.0"
-name: external-test
-description: "An external test stack"
+name: test
+description: "A test stack"
 repos:
   - github.com/bozemanpass/stack-test-project@test-branch
 containers:
