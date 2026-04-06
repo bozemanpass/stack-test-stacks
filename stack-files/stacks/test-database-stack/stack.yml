@@ -1,0 +1,8 @@
+name: test-database-stack
+description: "A test database stack"
+repos:
+containers:
+  - bozemanpass/test-database-container
+  - bozemanpass/test-database-client
+pods:
+  - test-database
