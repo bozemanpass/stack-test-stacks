@@ -5,7 +5,7 @@ if [ -n "$STACK_SCRIPT_DEBUG" ]; then
 fi
 
 # TODO derive this from config
-database_url="postgresql://test-user:password@database:5432/test-db"
+database_url="postgresql://test-user:password@localhost:5432/test-db"
 psql_command="psql ${database_url}"
 program_name="Database test client:"
 
