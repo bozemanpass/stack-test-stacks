@@ -1,0 +1,6 @@
+name: test-backup-stack
+description: "A test stack for backup and restore"
+containers:
+  - bozemanpass/test-container
+pods:
+  - test-backup
