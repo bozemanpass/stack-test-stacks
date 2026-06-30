@@ -7,6 +7,7 @@ services:
     restart: always
     volumes:
       - app-data:/data
+      - app-data2:/data2   # test-container writes to both /data and /data2
 
   # A local S3-compatible object store (SeaweedFS, Apache-2.0) used as the backup target.
   # Its own data volume is excluded from backup (exercises the backup-exclude annotation).
@@ -21,4 +22,5 @@ services:
 
 volumes:
   app-data:
+  app-data2:
   s3-data:
