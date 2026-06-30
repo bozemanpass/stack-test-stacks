@@ -1,0 +1,24 @@
+services:
+
+  # Holds the data we back up and restore. Keeps /data (the app-data volume) mounted and
+  # the container alive (it runs nginx forever).
+  app:
+    image: bozemanpass/test-container:stack
+    restart: always
+    volumes:
+      - app-data:/data
+
+  # A local S3-compatible object store (SeaweedFS, Apache-2.0) used as the backup target.
+  # Its own data volume is excluded from backup (exercises the backup-exclude annotation).
+  s3:
+    image: chrislusf/seaweedfs:latest
+    restart: always
+    command: ["server", "-s3", "-dir=/data", "-master.volumeSizeLimitMB=128"]
+    volumes:
+      - s3-data:/data   # @stack backup-exclude
+    ports:
+      - "8333"
+
+volumes:
+  app-data:
+  s3-data:
