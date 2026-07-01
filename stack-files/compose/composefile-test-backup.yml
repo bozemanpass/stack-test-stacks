@@ -11,10 +11,26 @@ services:
 
   # A local S3-compatible object store (SeaweedFS, Apache-2.0) used as the backup target.
   # Its own data volume is excluded from backup (exercises the backup-exclude annotation).
+  #
+  # Current SeaweedFS images reject *signed* S3 writes unless an S3 identity is configured,
+  # so restic's first PutObject (repository init) fails with "Signed request requires
+  # setting up SeaweedFS S3 authentication". We supply an identity matching the credentials
+  # the test passes to the backup container (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY). The
+  # config is written by an entrypoint wrapper rather than a mounted file so it travels with
+  # the (relocated) compose file. Anonymous read still works; only writes need the identity.
   s3:
     image: chrislusf/seaweedfs:latest
     restart: always
-    command: ["server", "-s3", "-dir=/data", "-master.volumeSizeLimitMB=128"]
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        cat > /tmp/s3-config.json <<'EOF'
+        {"identities":[{"name":"stack-backup","credentials":[{"accessKey":"test-access-key","secretKey":"test-secret-key"}],"actions":["Admin","Read","Write"]}]}
+        EOF
+        exec /entrypoint.sh "$@"
+      - sh
+    command: ["server", "-s3", "-s3.config=/tmp/s3-config.json", "-dir=/data", "-master.volumeSizeLimitMB=128"]
     volumes:
       - s3-data:/data   # @stack backup-exclude
     ports:
