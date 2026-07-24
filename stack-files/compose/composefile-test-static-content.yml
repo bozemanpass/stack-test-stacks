@@ -1,0 +1,6 @@
+services:
+  static-content:
+    image: bozemanpass/stack-test-static-content:stack
+    restart: always
+    ports:
+      - "80"
