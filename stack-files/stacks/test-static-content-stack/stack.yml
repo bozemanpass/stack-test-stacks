@@ -1,0 +1,8 @@
+name: test-static-content
+description: "A test stack hosting static content via the static-content wrapper"
+containers:
+  - name: bozemanpass/stack-test-static-content
+    ref: github.com/bozemanpass/stack-test-static-content
+    wrapper: static-content
+pods:
+  - test-static-content
