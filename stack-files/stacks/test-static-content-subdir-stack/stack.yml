@@ -1,0 +1,10 @@
+name: test-static-content-subdir
+description: "A test stack hosting static content from a subdirectory of the source repo"
+containers:
+  - name: bozemanpass/stack-test-static-content-subdir
+    ref: github.com/bozemanpass/stack-test-static-content
+    wrapper: static-content
+    # Serve only ./pages from the source repo, rather than the whole repo.
+    content-root: pages
+pods:
+  - test-static-content-subdir
