@@ -1,0 +1,39 @@
+name: Publish Container Images
+
+# Build and publish the stack's container images, identified by this repo's
+# commit hash.  Only clean, committed, fully-pinned state ever publishes;
+# anything else builds as an unpublishable stackdev- image.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install stack
+        run: |
+          mkdir -p $HOME/bin
+          curl -L -o $HOME/bin/stack https://github.com/bozemanpass/stack/releases/latest/download/stack
+          chmod +x $HOME/bin/stack
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Log in to container image registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish
+        run: |
+          stack prepare --stack ./stack-files/stacks/test-static-content-stack \
+            --publish-images --image-registry ghcr.io
