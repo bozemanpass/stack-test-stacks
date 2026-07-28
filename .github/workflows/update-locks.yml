@@ -1,0 +1,61 @@
+name: Update Locks
+
+# Regenerate the stack.lock pins at current upstream HEADs, validate them by
+# building, then commit, publish and push.  This is the only sanctioned way
+# lock updates happen: delete and regenerate, never hand-edit.
+#
+# Publishing happens inline (before the push) because pushes made with the
+# default GITHUB_TOKEN do not trigger other workflows, so the on-push publish
+# workflow would not fire for the lock commit.
+
+on:
+  workflow_dispatch:
+  # Uncomment to also ingest upstream changes on a schedule:
+  # schedule:
+  #   - cron: '0 9 * * 1'
+
+concurrency: update-locks
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    env:
+      STACK_DIR: stack-files/stacks/test-static-content-stack
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install stack
+        run: |
+          mkdir -p $HOME/bin
+          curl -L -o $HOME/bin/stack https://github.com/bozemanpass/stack/releases/latest/download/stack
+          chmod +x $HOME/bin/stack
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Log in to container image registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Regenerate locks (build validates the new pins)
+        run: |
+          rm -f $STACK_DIR/stack.lock
+          stack prepare --stack ./$STACK_DIR
+
+      - name: Commit, publish and push if the locks changed
+        run: |
+          if [ -n "$(git status --porcelain $STACK_DIR/stack.lock)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add $STACK_DIR/stack.lock
+            git commit -m "Update stack.lock for test-static-content"
+            stack prepare --stack ./$STACK_DIR --publish-images --image-registry ghcr.io
+            git push
+          else
+            echo "Locks unchanged; nothing to publish."
+          fi
