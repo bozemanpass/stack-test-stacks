@@ -1,0 +1,8 @@
+containers:
+  bozemanpass/stack-test-static-content:
+    ref: github.com/bozemanpass/stack-test-static-content
+    hash: 207308a9188de99988509f93c11a77baaba20871
+wrappers:
+  static-content:
+    ref: github.com/bozemanpass/stack-wrapper-static-content
+    hash: 05018a32b076dfd304eb90c522435306371698cb
