@@ -12,17 +12,21 @@ program_name="Database test client:"
 wait_for_database_up () {
     for i in {1..50}
     do
-        ${psql_command} -c "select 1;"
-        psql_succeeded=$?
-        if [[ ${psql_succeeded} == 0 ]]; then
+        # The psql call has to be the condition of the if, not a bare command
+        # whose $? is inspected afterwards: under `set -e` a bare failing psql
+        # exits the script, which made every line below it unreachable and this
+        # loop a single attempt.  On k8s that went unnoticed for a long time,
+        # because the pod was restarted until an attempt happened to land after
+        # the database was up -- the restart was doing the waiting this function
+        # is supposed to do.
+        if ${psql_command} -c "select 1;"; then
             # if ready, return
             echo "${program_name} database up"
             return
-        else
-            # if not ready, wait
-            echo "${program_name} waiting for database: ${i}"
-            sleep 5
         fi
+        # if not ready, wait
+        echo "${program_name} waiting for database: ${i}"
+        sleep 5
     done
     # Timed out, error exit
     echo "${program_name} waiting for database: FAILED"
