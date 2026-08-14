@@ -1,4 +1,5 @@
 # Copyright © 2022, 2023 Vulcanize
+# Copyright © 2026 Bozeman Pass, Inc.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -13,45 +14,44 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http:#www.gnu.org/licenses/>.
 
-from stack_orchestrator.util import get_yaml
-from stack_orchestrator.deploy.deploy_types import DeployCommandContext
-from stack_orchestrator.deploy.stack_state import State
-from stack_orchestrator.deploy.deploy_util import VolumeMapping, run_container_command
-from pathlib import Path
+"""Deploy hooks for the test stack.
 
-default_spec_file_content = """config:
-    test-variable-1: test-value-1
+These exist to be observed rather than to do anything useful: they are how the
+stack tool's own tests check that a stack's `deploy/commands.py` is found and
+called.  Each hook leaves a side effect a shell test can assert on, so keep the
+strings below in step with the assertions in bozemanpass/stack.
+
+Previously written against the `stack_orchestrator` package and its hook
+signatures, which left them unimportable and uncallable; see issue #8 there and
+bozemanpass/stack#232 for why nothing noticed.
 """
 
+from stack.deploy.deploy_types import DeployCommandContext
+from stack.deploy.deployment_context import DeploymentContext
+from stack.deploy.spec import Spec
 
-# Output a known string to a know file in the bind mounted directory ./container-output-dir
-# for test purposes -- test checks that the file was written.
-def setup(command_context: DeployCommandContext, parameters, extra_args):
-    host_directory = "./container-output-dir"
-    host_directory_absolute = Path(extra_args[0]).absolute().joinpath(host_directory)
-    host_directory_absolute.mkdir(parents=True, exist_ok=True)
-    mounts = [
-        VolumeMapping(host_directory_absolute, "/data")
-    ]
-    output, status = run_container_command(command_context, "test", "echo output-data > /data/output-file && echo success", mounts)
+CREATE_FILE_NAME = "create-file"
+CREATE_FILE_CONTENT = "create-command-output-data"
 
 
-def init(command_context: DeployCommandContext):
-    yaml = get_yaml()
-    return yaml.load(default_spec_file_content)
+def init(command_context: DeployCommandContext, spec: Spec) -> Spec:
+    """Add a config variable to the spec `stack init` is generating.
+
+    The tool passes the spec it has built so far and uses what comes back, so
+    amend it rather than returning a fresh one.
+    """
+    config = spec.get("config", {})
+    config["test-variable-1"] = "test-value-1"
+    spec["config"] = config
+    return spec
 
 
-def create(command_context: DeployCommandContext, extra_args):
-    data = "create-command-output-data"
-    output_file_path = command_context.deployment_dir.joinpath("create-file")
-    with open(output_file_path, 'w+') as output_file:
-        output_file.write(data)
-
-
-def get_state(command_context: DeployCommandContext):
-    print("Here we get state")
-    return State.CONFIGURED
-
-
-def change_state(command_context: DeployCommandContext):
-    pass
+def create(
+    command_context: DeployCommandContext,
+    deployment_context: DeploymentContext,
+    stack,
+):
+    """Write a known string to a known file in the deployment directory."""
+    output_file_path = deployment_context.deployment_dir.joinpath(CREATE_FILE_NAME)
+    with open(output_file_path, "w") as output_file:
+        output_file.write(CREATE_FILE_CONTENT)
