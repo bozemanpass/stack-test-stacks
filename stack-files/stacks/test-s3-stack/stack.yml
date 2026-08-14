@@ -1,0 +1,4 @@
+name: test-s3-stack
+description: "A local S3-compatible object store (SeaweedFS), for tests that need one"
+pods:
+  - test-s3

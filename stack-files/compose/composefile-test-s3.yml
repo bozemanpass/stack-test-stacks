@@ -1,0 +1,36 @@
+services:
+
+  # A local S3-compatible object store (SeaweedFS, Apache-2.0), for a test that needs an
+  # object store but has no real one: the backup test mixes this in on the Docker target,
+  # where the backup container writes its restic repository to it. On a real cluster the
+  # test uses a real object store instead and does not mix this in.
+  #
+  # Current SeaweedFS images reject *signed* S3 writes unless an S3 identity is configured,
+  # so restic's first PutObject (repository init) fails with "Signed request requires
+  # setting up SeaweedFS S3 authentication". We supply an identity matching the credentials
+  # the test configures the backup container with. The config is written by an entrypoint
+  # wrapper rather than a mounted file so it travels with the (relocated) compose file.
+  # Anonymous read still works; only writes need the identity.
+  #
+  # Its own volume is excluded from backup: the backup repository is in there, and backing
+  # a repository up into itself is not a useful thing to do.
+  s3:
+    image: chrislusf/seaweedfs:latest
+    restart: always
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        cat > /tmp/s3-config.json <<'EOF'
+        {"identities":[{"name":"stack-backup","credentials":[{"accessKey":"test-access-key","secretKey":"test-secret-key"}],"actions":["Admin","Read","Write"]}]}
+        EOF
+        exec /entrypoint.sh "$@"
+      - sh
+    command: ["server", "-s3", "-s3.config=/tmp/s3-config.json", "-dir=/data", "-master.volumeSizeLimitMB=128"]
+    volumes:
+      - s3-data:/data   # @stack backup-exclude
+    ports:
+      - "8333"
+
+volumes:
+  s3-data:
