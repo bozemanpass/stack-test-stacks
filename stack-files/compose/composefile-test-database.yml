@@ -1,10 +1,30 @@
 services:
 
+  # A database, backed up the way a database should be: as a logical dump taken at
+  # backup time, and not as a file-level copy of its data directory.
+  #
+  # Hence the two annotations below, which are what the backup documentation tells
+  # the author of a database component to write:
+  #
+  #   - db-data, the live data directory, is excluded. A file-level copy of it read
+  #     while the database writes can be torn and so unrestorable, and keeping it
+  #     alongside the dump would roughly double the size of every backup to hold a
+  #     second, worse copy of the same data.
+  #   - backup-command runs pg_dump inside this container before restic runs, so what
+  #     the backup holds is a consistent snapshot of the database's contents rather
+  #     than of its files.
+  #
+  # The dump is written to a volume of its own rather than captured from the command's
+  # stdout, because a dump is only useful somewhere the database can reach it: db-dumps
+  # is backed up like any other volume, a restore fills it, and pg_restore then runs in
+  # this container against the file it finds there. (The stdout capture still happens
+  # and is empty, so a backup also carries a zero-length _dumps entry.)
   database:
     image: bozemanpass/test-database-container:stack
     restart: always
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql/data   # @stack backup-exclude
+      - db-dumps:/dumps
     environment:
       POSTGRES_USER: "test-user"
       POSTGRES_DB: "test-db"
@@ -12,9 +32,11 @@ services:
       POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
     ports:
       - "5432"
+    # @stack backup-command pg_dump -U test-user -d test-db -Fc -f /dumps/test-db.dump
 
   test-client:
     image: bozemanpass/test-database-client:stack
 
 volumes:
   db-data:
+  db-dumps:
