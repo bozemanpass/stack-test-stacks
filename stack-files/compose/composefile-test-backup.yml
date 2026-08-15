@@ -9,12 +9,18 @@ services:
   # deployment target -- on Kubernetes it becomes the k8up.io/backup=false annotation on
   # the volume's PVC, which is a different mechanism than the Docker target's and is
   # worth testing.
+  # The backup-command annotation is the fixture for application-consistent dumps: at
+  # backup time the command runs inside this container and its stdout is captured into
+  # the backup as a snapshot of its own. cat of the payload file stands in for a real
+  # database dump; the test asserts the captured output matches what it wrote.
   app:
     image: bozemanpass/test-container:stack
     restart: always
     volumes:
       - app-data:/data
       - app-data2:/data2   # @stack backup-exclude
+    # @stack backup-command cat /data/payload.txt
+    # @stack backup-file-extension txt
 
 volumes:
   app-data:
