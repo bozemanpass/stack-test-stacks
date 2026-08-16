@@ -1,30 +1,28 @@
 services:
 
-  # A database, backed up the way a database should be: as a logical dump taken at
+  # A database, backed up the way a database should be: as a logical dump streamed at
   # backup time, and not as a file-level copy of its data directory.
   #
-  # Hence the two annotations below, which are what the backup documentation tells
-  # the author of a database component to write:
+  # Hence the two annotations below, which are what the backup documentation tells the
+  # author of a database component to write:
   #
-  #   - db-data, the live data directory, is excluded. A file-level copy of it read
-  #     while the database writes can be torn and so unrestorable, and keeping it
-  #     alongside the dump would roughly double the size of every backup to hold a
-  #     second, worse copy of the same data.
-  #   - backup-command runs pg_dump inside this container before restic runs, so what
-  #     the backup holds is a consistent snapshot of the database's contents rather
-  #     than of its files.
+  #   - db-data, the live data directory, is excluded. A file-level copy of it read while
+  #     the database writes can be torn and so unrestorable, and keeping it alongside the
+  #     dump would roughly double the size of every backup to hold a second, worse copy
+  #     of the same data. With it excluded the dump is the whole backup.
+  #   - backup-command runs pg_dump inside this container at backup time, and its
+  #     **stdout is the backup** -- the engine streams it straight into a snapshot of its
+  #     own. It is not a hook that prepares files for the volume backup: neither engine
+  #     orders it against the volume snapshots, and K8up demonstrably does not.
   #
-  # The dump is written to a volume of its own rather than captured from the command's
-  # stdout, because a dump is only useful somewhere the database can reach it: db-dumps
-  # is backed up like any other volume, a restore fills it, and pg_restore then runs in
-  # this container against the file it finds there. (The stdout capture still happens
-  # and is empty, so a backup also carries a zero-length _dumps entry.)
+  # Plain SQL rather than pg_dump's custom format, and --clean --if-exists, so that
+  # recovering is `psql < dump.sql` against a database that may already have these tables
+  # -- which is what restoring into a redeployed stack looks like.
   database:
     image: bozemanpass/test-database-container:stack
     restart: always
     volumes:
       - db-data:/var/lib/postgresql/data   # @stack backup-exclude
-      - db-dumps:/dumps
     environment:
       POSTGRES_USER: "test-user"
       POSTGRES_DB: "test-db"
@@ -32,11 +30,14 @@ services:
       POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
     ports:
       - "5432"
-    # @stack backup-command pg_dump -U test-user -d test-db -Fc -f /dumps/test-db.dump
+    # Written as a plain argv, with no shell metacharacters: K8up execs the command
+    # directly rather than through a shell, so a command needing pipes or redirection
+    # would have to be written as `sh -c '...'` to mean the same thing on both targets.
+    # @stack backup-command pg_dump -U test-user -d test-db --clean --if-exists
+    # @stack backup-file-extension sql
 
   test-client:
     image: bozemanpass/test-database-client:stack
 
 volumes:
   db-data:
-  db-dumps:
