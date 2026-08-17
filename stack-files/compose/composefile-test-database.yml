@@ -26,7 +26,9 @@ services:
     environment:
       POSTGRES_USER: "test-user"
       POSTGRES_DB: "test-db"
-      POSTGRES_PASSWORD: "password"
+      # POSTGRES_PASSWORD is not set here: stack.yml declares it a secret, so a value
+      # is generated at deploy time and injected into every container -- this one and
+      # the client alike.  See the stack repo's docs/secrets.md.
       POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
     ports:
       - "5432"

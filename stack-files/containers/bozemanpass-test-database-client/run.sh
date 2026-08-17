@@ -4,8 +4,11 @@ if [ -n "$STACK_SCRIPT_DEBUG" ]; then
   set -x
 fi
 
-# TODO derive this from config
-database_url="postgresql://test-user:password@database:5432/test-db"
+# The password is a stack-declared secret, injected into this container's environment
+# at deploy time on every target; nobody types it and no file in the stack carries it.
+# Failing the expansion outright beats connecting with a guessed default: an auth loop
+# against the real database looks like "database slow to start", not "secret missing".
+database_url="postgresql://test-user:${POSTGRES_PASSWORD:?not injected -- the stack secrets mechanism should have set it}@database:5432/test-db"
 psql_command="psql ${database_url}"
 program_name="Database test client:"
 
