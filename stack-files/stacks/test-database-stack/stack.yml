@@ -6,3 +6,8 @@ containers:
   - bozemanpass/test-database-client
 pods:
   - test-database
+# The database password is a declared secret: generated at deploy time, delivered to
+# every container of the deployment (the database and its client both need it), and
+# never written into the stack files, the spec, or the deployment artifacts.
+secrets:
+  POSTGRES_PASSWORD:
