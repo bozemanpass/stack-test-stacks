@@ -1,15 +1,22 @@
 name: Update Locks
 
-# Regenerate the stack.lock pins at current upstream HEADs, validate them by
-# building, then commit, publish and push.  This is the only sanctioned way
-# lock updates happen: delete and regenerate, never hand-edit.
+# Regenerate the lock pins of every stack in this repo at current upstream
+# state -- wrapper and source-repo commits, and external image digests --
+# validate them by building, then commit and push.  This is the only
+# sanctioned way lock updates happen: delete and regenerate, never hand-edit.
 #
 # Publishing happens inline (before the push) because pushes made with the
 # default GITHUB_TOKEN do not trigger other workflows, so the on-push publish
-# workflow would not fire for the lock commit.
+# workflow would not fire for the lock commit.  Only the stacks named in
+# PUBLISH_STACKS publish -- the same set as publish-images.yml.
 
 on:
   workflow_dispatch:
+    inputs:
+      stack:
+        description: "Only update this stack (directory name under stack-files/stacks); default: all"
+        required: false
+        default: ""
   # Uncomment to also ingest upstream changes on a schedule:
   # schedule:
   #   - cron: '0 9 * * 1'
@@ -23,7 +30,9 @@ jobs:
       contents: write
       packages: write
     env:
-      STACK_DIR: stack-files/stacks/test-static-content-stack
+      STACKS_ROOT: stack-files/stacks
+      PUBLISH_STACKS: test-static-content-stack
+      ONLY_STACK: ${{ inputs.stack }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -42,20 +51,29 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Regenerate locks (build validates the new pins)
+      - name: Regenerate locks (each build validates its stack's new pins)
         run: |
-          rm -f $STACK_DIR/stack.lock
-          stack prepare --stack ./$STACK_DIR
+          for stack_dir in $STACKS_ROOT/*/; do
+            name=$(basename "$stack_dir")
+            if [ -n "$ONLY_STACK" ] && [ "$name" != "$ONLY_STACK" ]; then
+              continue
+            fi
+            echo "=== $name"
+            rm -f "$stack_dir/stack.lock"
+            stack prepare --stack "./$stack_dir"
+          done
 
-      - name: Commit, publish and push if the locks changed
+      - name: Commit, publish and push if any locks changed
         run: |
-          if [ -n "$(git status --porcelain $STACK_DIR/stack.lock)" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add $STACK_DIR/stack.lock
-            git commit -m "Update stack.lock for test-static-content"
-            stack prepare --stack ./$STACK_DIR --publish-images --image-registry ghcr.io
-            git push
-          else
+          if [ -z "$(git status --porcelain "$STACKS_ROOT")" ]; then
             echo "Locks unchanged; nothing to publish."
+            exit 0
           fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$STACKS_ROOT"/*/stack.lock
+          git commit -m "Update stack locks"
+          for name in $PUBLISH_STACKS; do
+            stack prepare --stack "./$STACKS_ROOT/$name" --publish-images --image-registry ghcr.io
+          done
+          git push
