@@ -1,5 +1,9 @@
 name: test
 description: "A test stack"
+# Deliberate legacy coverage: repos: is deprecated (the clone set is derived from
+# container refs), but this stack keeps one entry so the smoke test still exercises
+# the "throw in an extra repo" path -- including its @branch handling -- until the
+# feature is removed.  `stack validate` warning about it here is expected.
 repos:
   - github.com/bozemanpass/stack-test-project@test-branch
 containers:
