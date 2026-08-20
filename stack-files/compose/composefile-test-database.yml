@@ -30,8 +30,13 @@ services:
       # is generated at deploy time and injected into every container -- this one and
       # the client alike.  See the stack repo's docs/secrets.md.
       POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
-    ports:
-      - "5432"
+    # No ports: on purpose.  Nothing outside the deployment reaches this database --
+    # the client is a container of the stack's own, and the backup test runs psql
+    # through `manage exec` -- so declaring 5432 here would only be a way of getting a
+    # hostname, which a service is entitled to whether or not it publishes a port.  It
+    # was declared until stack#280, and that is why the k8s deployer emitting no
+    # Service at all for a portless service went unnoticed for so long.
+
     # Written as a plain argv, with no shell metacharacters: K8up execs the command
     # directly rather than through a shell, so a command needing pipes or redirection
     # would have to be written as `sh -c '...'` to mean the same thing on both targets.
