@@ -5,4 +5,4 @@ containers:
 wrappers:
   static-content:
     ref: github.com/bozemanpass/stack-wrapper-static-content
-    hash: 05018a32b076dfd304eb90c522435306371698cb
+    hash: 91fb1e11538b67b5d7cbbde3570c7d2f3153f087
